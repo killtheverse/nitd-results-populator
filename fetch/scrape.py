@@ -2,6 +2,10 @@ import logging
 
 from .rolls import roll_numbers, skip_numbers
 
+
+
+PAGE_URL = "https://erp.nitdelhi.ac.in/CampusLynxNITD/studentonindex.jsp"
+
 def generate_list():
     '''
     Generates a list of roll numbers to be considered
@@ -52,5 +56,7 @@ def generate_list():
     return sorted(list(rolls))
 
 
+
+
 def fetch_results():
-    print(generate_list())
+    pass
