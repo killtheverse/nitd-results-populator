@@ -14,10 +14,10 @@ class Course:
 class Semester:
     '''Class for representing a particular semester for any student'''
     number: int
-    courses: list[Course] = field(default_factory=list)
-    earned_credit: int
+    earned_credits: int
     sgpa: float
     cgpa: float
+    courses: list[Course] = field(default_factory=list)
 
 
 @dataclass
