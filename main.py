@@ -1,9 +1,12 @@
 import argparse
 import logging
 
+from dotenv import load_dotenv
 from fetch.scrape import fetch_results
 
+
 def main():
+    load_dotenv()
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-b", 

@@ -1,5 +1,6 @@
 import unittest
-from database.models import Course, Semester, Student
+from db.models import Course, Semester, Student
+from db.database import Database
 
 
 class CourseTestCase(unittest.TestCase):
@@ -72,6 +73,18 @@ class StudentTestCase(unittest.TestCase):
     def test_student(self):
         self.assertEqual(self.student.semesters[-1].cgpa, self.student.cgpa)
         self.assertNotEqual(len(self.student.semesters), 0)
+
+
+class DataBaseTest(unittest.TestCase):
+    def setUp(self):
+        Database.initialize()
+        self.collection = Database.database["student"]
+    
+    def test_database_connection(self):
+        self.assertNotEqual(Database.database, None)
+
+    def test_collection_access(self):
+        self.assertNotEqual(self.collection, None)
 
 
 if __name__ == "__main__":
