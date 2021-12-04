@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class Database(object):
+class Database():
     uri = os.getenv("MONGODB_URI")
     database_name = os.getenv("MONGODB_NAME")
     database = None
