@@ -12,7 +12,7 @@ def main():
         "-b", 
         "--browser", 
         help="browser specification for web scraping",
-        default="chrome",
+        default="firefox",
         choices=["chrome", "firefox", "edge", "safari"]
     )
     parser.add_argument(

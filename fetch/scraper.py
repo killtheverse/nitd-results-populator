@@ -3,6 +3,7 @@ import sys
 import logging
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
+from bs4 import BeautifulSoup
 
 
 class WebScraper():
@@ -37,11 +38,11 @@ class WebScraper():
                     return webdriver.Safari(executable_path=driver_path)
         except WebDriverException as exception:
             logging.error(f"[ERROR] Loading driver for {browser}. {exception.msg}")
-            print("You can add add driver path using -d or --driver")
+            print("You can add add driver path using -d/--driver or select a different browser using -b/--browser.")
             sys.exit(1)
             
     
-    def enter_student_details(self, roll_no): 
+    def get_student_details_page(self, roll_no): 
         self.driver.get(WebScraper.page_url)
         iframe = self.driver.find_elements_by_tag_name('iframe')[0]
         self.driver.switch_to.frame(iframe)
@@ -57,6 +58,36 @@ class WebScraper():
         submit_button = self.driver.find_elements_by_id('cbutton')[0]
         submit_button.click()
         
-        # time.sleep(3)
+        time.sleep(3)
         self.driver.find_element_by_class_name("tdcolor").click()
-        # time.sleep(3)
+        time.sleep(3)
+        return BeautifulSoup(self.driver.page_source, "html.parser")
+
+    def get_student_details(self, soup):
+        span = soup.find("span", id="snamedetail")
+        details_text_list = span.text.split("\xa0")
+        student_name = details_text_list[0].split(" : ")[1].title()
+        student_roll_no = details_text_list[5].split(" : ")[1]
+        student_program = details_text_list[10].split(" : ")[1]
+        student_branch = details_text_list[15].split(" : ")[1]
+        return student_name, student_roll_no, student_program, student_branch
+
+    def get_semester_details(self):
+        pass
+
+    def get_student_results(self, soup):
+        results_table = soup.find("tbody", id="examgradeid")
+        results = dict()
+        semesters = results_table.find_all("tr")
+        for index, semester in enumerate(semesters):
+            semester_cols = semester.find_all("td")
+            results[index+1] = {
+                "earned_credits": int(semester_cols[1].text),
+                "sgpa": float(semester_cols[2].text),
+                "cgpa": float(semester_cols[3].text),
+                "result_status": semester_cols[4].text
+            }
+        return results
+
+    def get_student_data(self):
+        pass
