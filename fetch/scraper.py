@@ -71,7 +71,7 @@ class WebScraper():
 
         try:
             WebDriverWait(self.driver, 5).until(
-                EC.visibility_of_all_elements_located((By.ID, "examgradeid"))
+                EC.element_to_be_clickable((By.TAG_NAME, "a"))
             )
         except TimeoutException as exception:
             logging(f"[ERROR] Loading webpage. {exception.msg}")
@@ -88,14 +88,15 @@ class WebScraper():
         student_branch = details_text_list[15].split(" : ")[1]
         return student_name, student_roll_no, student_program, student_branch
 
-    def get_semester_details(self):
+    def get_semester_details(self, link):
         pass
 
     def get_student_results(self, soup):
         results_table = soup.find("tbody", id="examgradeid")
         results = dict()
-        semesters = results_table.find_all("tr")
-        for index, semester in enumerate(semesters):
+        semester_rows = results_table.find_all("tr")
+        semester_dialogbox_links = soup.find_all("a")
+        for index, (semester, link) in enumerate(zip(semester_rows, semester_dialogbox_links)):
             semester_cols = semester.find_all("td")
             results[index+1] = {
                 "earned_credits": int(semester_cols[1].text),
@@ -103,6 +104,7 @@ class WebScraper():
                 "cgpa": float(semester_cols[3].text),
                 "result_status": semester_cols[4].text
             }
+
         return results
 
     def get_student_data(self):
