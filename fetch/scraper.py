@@ -1,8 +1,10 @@
-import time
 import sys
 import logging
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 
 
@@ -58,9 +60,23 @@ class WebScraper():
         submit_button = self.driver.find_elements_by_id('cbutton')[0]
         submit_button.click()
         
-        time.sleep(3)
-        self.driver.find_element_by_class_name("tdcolor").click()
-        time.sleep(3)
+        try:
+            element = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable((By.CLASS_NAME, "tdcolor"))
+            )
+            element.click()
+        except TimeoutException as exception:
+            logging(f"[ERROR] Loading webpage. {exception.msg}")
+            sys.exit(1)
+
+        try:
+            WebDriverWait(self.driver, 5).until(
+                EC.visibility_of_all_elements_located((By.ID, "examgradeid"))
+            )
+        except TimeoutException as exception:
+            logging(f"[ERROR] Loading webpage. {exception.msg}")
+            sys.exit(1)
+
         return BeautifulSoup(self.driver.page_source, "html.parser")
 
     def get_student_details(self, soup):
