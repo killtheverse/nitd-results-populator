@@ -1,3 +1,4 @@
+import time
 import sys
 import logging
 from selenium import webdriver
@@ -6,6 +7,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
+
+from db.models import Course, Semester, Student
 
 
 class WebScraper():
@@ -89,23 +92,60 @@ class WebScraper():
         return student_name, student_roll_no, student_program, student_branch
 
     def get_semester_details(self, link):
-        pass
+        WebDriverWait(self.driver, 1).until(
+            EC.element_to_be_clickable(link)
+        )
+        link.click()
+    
+        WebDriverWait(self.driver, 5).until(
+            EC.presence_of_element_located((By.NAME, "subjectcode"))
+        )
+        
+        courses = list()
+        soup = BeautifulSoup(self.driver.page_source, "html.parser")
+        table = soup.find("tbody", id="gradeid")
+        subject_rows = table.find_all("tr")
+        for subject_row in subject_rows:
+            subject_cols = subject_row.find_all("td")
+            course = Course(
+                name = subject_cols[0].text, 
+                code = subject_cols[1].text, 
+                course_credits = int(subject_cols[2].text), 
+                grade = subject_cols[3].text
+            )
+            courses.append(course)
+        self.driver.find_element_by_class_name("ui-dialog-titlebar-close").click()
+        time.sleep(2)
+        return courses
 
     def get_student_results(self, soup):
         results_table = soup.find("tbody", id="examgradeid")
-        results = dict()
+        results = list()
         semester_rows = results_table.find_all("tr")
-        semester_dialogbox_links = soup.find_all("a")
+        semester_dialogbox_links = self.driver.find_elements_by_tag_name("a")
         for index, (semester, link) in enumerate(zip(semester_rows, semester_dialogbox_links)):
             semester_cols = semester.find_all("td")
-            results[index+1] = {
-                "earned_credits": int(semester_cols[1].text),
-                "sgpa": float(semester_cols[2].text),
-                "cgpa": float(semester_cols[3].text),
-                "result_status": semester_cols[4].text
-            }
+            sem = Semester(
+                number = index+1, 
+                earned_credits = int(semester_cols[1].text), 
+                sgpa = float(semester_cols[2].text), 
+                cgpa = float(semester_cols[3].text), 
+                courses=self.get_semester_details(link)
+            )
+            results.append(sem)
 
         return results
 
-    def get_student_data(self):
-        pass
+    def get_student_data(self, roll_no):
+        soup = self.get_student_details_page(roll_no)
+        student_details = self.get_student_details(soup)
+        semesters = self.get_student_results(soup)
+        student = Student(
+            name = student_details[0], 
+            roll_no = student_details[1], 
+            program = student_details[2], 
+            branch = student_details[3], 
+            cgpa = semesters[-1].cgpa,
+            semesters = semesters
+        )
+        return student
