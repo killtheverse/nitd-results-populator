@@ -24,7 +24,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
     logging.info("Starting")
-    fetch_results()
+    fetch_results(args.browser, args.driver)
     logging.info("Finished")
     
 

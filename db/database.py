@@ -1,5 +1,6 @@
 import os
 import pymongo
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,5 +13,7 @@ class Database():
 
     @staticmethod
     def initialize():
+        logging.info("Establishing Database connection")
         client = pymongo.MongoClient(Database.uri)
+        logging.info("Database connection established")
         Database.database = client[Database.database_name]

@@ -1,6 +1,7 @@
 import time
 import sys
 import logging
+from dataclasses import asdict
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -9,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 
 from db.models import Course, Semester, Student
+from db.database import Database
 
 
 class WebScraper():
@@ -114,7 +116,15 @@ class WebScraper():
                 grade = subject_cols[3].text
             )
             courses.append(course)
-        self.driver.find_element_by_class_name("ui-dialog-titlebar-close").click()
+        
+        dialog_close_button = self.driver.find_element_by_class_name("ui-dialog-titlebar-close")
+        try:
+            WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable(dialog_close_button)
+            )
+            dialog_close_button.click()
+        except:
+            logging.error("Can't close dialog box")
         time.sleep(2)
         return courses
 
@@ -149,3 +159,12 @@ class WebScraper():
             semesters = semesters
         )
         return student
+    
+    def update_student_details(self, roll_numbers):
+        Database().initialize()
+        collection = Database().database["student"]
+        for roll_number in roll_numbers:
+            student = self.get_student_data(roll_number)
+            collection.insert_one(asdict(student))
+            logging.info(f"Updated entry for {roll_number}")
+            

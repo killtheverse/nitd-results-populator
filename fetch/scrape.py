@@ -1,6 +1,7 @@
 import logging
 
 from .rolls import roll_numbers, skip_numbers
+from .scraper import WebScraper
 
 
 
@@ -56,7 +57,8 @@ def generate_list():
     return sorted(list(rolls))
 
 
-
-
-def fetch_results():
-    pass
+def fetch_results(browser, driver):
+    roll_nos = generate_list()
+    logging.info("Roll numbers generated")
+    webscraper = WebScraper(browser, driver)
+    webscraper.update_student_details(roll_nos)

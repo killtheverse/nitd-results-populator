@@ -31,4 +31,4 @@ class Student():
     semesters: list[Semester] = field(default_factory=list)
     
     def to_json(self):
-        return json.jumps(self.__dict__, default=lambda x: x.__dict__, indent=4)
+        return json.dumps(self.__dict__, default=lambda x: x.__dict__, indent=4)
