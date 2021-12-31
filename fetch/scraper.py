@@ -3,7 +3,9 @@ import sys
 import logging
 from dataclasses import asdict
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException, TimeoutException
+from selenium.common.exceptions import (
+    WebDriverException, TimeoutException, 
+    ElementClickInterceptedException, StaleElementReferenceException)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -72,7 +74,7 @@ class WebScraper():
             element.click()
         except TimeoutException as exception:
             logging(f"[ERROR] Loading webpage. {exception.msg}")
-            sys.exit(1)
+            return None
 
         try:
             WebDriverWait(self.driver, 5).until(
@@ -80,24 +82,34 @@ class WebScraper():
             )
         except TimeoutException as exception:
             logging(f"[ERROR] Loading webpage. {exception.msg}")
-            sys.exit(1)
+            return None
 
         return BeautifulSoup(self.driver.page_source, "html.parser")
 
     def get_student_details(self, soup):
-        span = soup.find("span", id="snamedetail")
-        details_text_list = span.text.split("\xa0")
-        student_name = details_text_list[0].split(" : ")[1].title()
-        student_roll_no = details_text_list[5].split(" : ")[1]
-        student_program = details_text_list[10].split(" : ")[1]
-        student_branch = details_text_list[15].split(" : ")[1]
-        return student_name, student_roll_no, student_program, student_branch
+        try:
+            span = soup.find("span", id="snamedetail")
+            details_text_list = span.text.split("\xa0")
+            student_name = details_text_list[0].split(" : ")[1].title()
+            student_roll_no = details_text_list[5].split(" : ")[1]
+            student_program = details_text_list[10].split(" : ")[1]
+            student_branch = details_text_list[15].split(" : ")[1]
+            return (student_name, student_roll_no, student_program, student_branch)
+        except Exception as e:
+            logging.error(f"[ERROR]: {e}")
+            return None
 
     def get_semester_details(self, link):
-        WebDriverWait(self.driver, 1).until(
-            EC.element_to_be_clickable(link)
-        )
-        link.click()
+        while True:
+            try:
+                link.click()
+                break
+            except ElementClickInterceptedException:
+                time.sleep(0.5)
+                continue
+            except Exception as e:
+                logging.error(f"[ERROR]: {e}")
+                return None        
     
         WebDriverWait(self.driver, 5).until(
             EC.presence_of_element_located((By.NAME, "subjectcode"))
@@ -117,15 +129,13 @@ class WebScraper():
             )
             courses.append(course)
         
+        time.sleep(1)
         dialog_close_button = self.driver.find_element_by_class_name("ui-dialog-titlebar-close")
-        try:
-            WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable(dialog_close_button)
-            )
-            dialog_close_button.click()
-        except:
-            logging.error("Can't close dialog box")
-        time.sleep(2)
+        WebDriverWait(self.driver, 5).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "ui-dialog-titlebar-close"))
+        )
+        dialog_close_button.click()
+        
         return courses
 
     def get_student_results(self, soup):
@@ -135,12 +145,15 @@ class WebScraper():
         semester_dialogbox_links = self.driver.find_elements_by_tag_name("a")
         for index, (semester, link) in enumerate(zip(semester_rows, semester_dialogbox_links)):
             semester_cols = semester.find_all("td")
+            courses = self.get_semester_details(link)
+            if courses is None:
+                continue
             sem = Semester(
                 number = index+1, 
                 earned_credits = int(semester_cols[1].text), 
                 sgpa = float(semester_cols[2].text), 
                 cgpa = float(semester_cols[3].text), 
-                courses=self.get_semester_details(link)
+                courses = courses
             )
             results.append(sem)
 
@@ -148,7 +161,13 @@ class WebScraper():
 
     def get_student_data(self, roll_no):
         soup = self.get_student_details_page(roll_no)
+        if soup is None:
+            logging.error(f"[ERROR]: Loading page for {roll_no}")
+            return None
         student_details = self.get_student_details(soup)
+        if student_details is None:
+            logging.error(f"[ERROR]: Can't extract student details for {roll_no}")
+            return None
         semesters = self.get_student_results(soup)
         student = Student(
             name = student_details[0], 
@@ -165,6 +184,10 @@ class WebScraper():
         collection = Database().database["student"]
         for roll_number in roll_numbers:
             student = self.get_student_data(roll_number)
-            collection.insert_one(asdict(student))
+            if student is None:
+                logging.info(f"Skipping entry for {roll_number}")
+                continue
+            # collection.update(asdict(student))
+
             logging.info(f"Updated entry for {roll_number}")
             
