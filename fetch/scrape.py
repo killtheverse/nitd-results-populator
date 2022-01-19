@@ -4,9 +4,6 @@ from .rolls import roll_numbers, skip_numbers
 from .scraper import WebScraper
 
 
-
-PAGE_URL = "https://erp.nitdelhi.ac.in/CampusLynxNITD/studentonindex.jsp"
-
 def generate_list():
     '''
     Generates a list of roll numbers to be considered
@@ -57,8 +54,8 @@ def generate_list():
     return sorted(list(rolls))
 
 
-def fetch_results(browser, driver):
+def fetch_results(browser, driver, client):
     roll_nos = generate_list()
     logging.info("Roll numbers generated")
-    webscraper = WebScraper(browser, driver)
+    webscraper = WebScraper(browser, client, driver)
     webscraper.update_student_details(roll_nos)

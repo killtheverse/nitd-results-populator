@@ -25,10 +25,11 @@ class Student():
     '''Class for representing a Student'''
     name: str
     roll_no: str
-    program: str 
+    program: str
     branch: str
     cgpa: float
     semesters: list[Semester] = field(default_factory=list)
-    
+
     def to_json(self):
+        '''Convert student object to JSON'''
         return json.dumps(self.__dict__, default=lambda x: x.__dict__, indent=4)

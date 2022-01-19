@@ -11,16 +11,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 
-from db.models import Course, Semester, Student
-from db.database import Database
+from client.models import Course, Semester, Student
 
 
 class WebScraper():
     
     page_url = "https://erp.nitdelhi.ac.in/CampusLynxNITD/studentonindex.jsp"
     
-    def __init__(self, browser, driver_path=None):
+    def __init__(self, browser, client, driver_path=None):
         self.driver = self.get_driver(browser=browser, driver_path=driver_path)
+        self.client = client
 
     @staticmethod
     def get_driver(browser, driver_path):
@@ -73,7 +73,7 @@ class WebScraper():
             )
             element.click()
         except TimeoutException as exception:
-            logging(f"[ERROR] Loading webpage. {exception.msg}")
+            logging.error(f"[ERROR] Loading webpage. {exception.msg}")
             return None
 
         try:
@@ -81,7 +81,7 @@ class WebScraper():
                 EC.element_to_be_clickable((By.TAG_NAME, "a"))
             )
         except TimeoutException as exception:
-            logging(f"[ERROR] Loading webpage. {exception.msg}")
+            logging.error(f"[ERROR] Loading webpage. {exception.msg}")
             return None
 
         return BeautifulSoup(self.driver.page_source, "html.parser")
@@ -91,7 +91,7 @@ class WebScraper():
             span = soup.find("span", id="snamedetail")
             details_text_list = span.text.split("\xa0")
             student_name = details_text_list[0].split(" : ")[1].title()
-            student_roll_no = details_text_list[5].split(" : ")[1]
+            student_roll_no = details_text_list[5].split(" : ")[1][:-1]
             student_program = details_text_list[10].split(" : ")[1]
             student_branch = details_text_list[15].split(" : ")[1]
             return (student_name, student_roll_no, student_program, student_branch)
@@ -180,14 +180,13 @@ class WebScraper():
         return student
     
     def update_student_details(self, roll_numbers):
-        Database().initialize()
-        collection = Database().database["student"]
+        
         for roll_number in roll_numbers:
             student = self.get_student_data(roll_number)
             if student is None:
                 logging.info(f"Skipping entry for {roll_number}")
                 continue
-            # collection.update(asdict(student))
+            else:
+                self.client.update_student(student)
 
-            logging.info(f"Updated entry for {roll_number}")
             
