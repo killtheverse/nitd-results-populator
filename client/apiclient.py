@@ -37,11 +37,15 @@ class APIClient():
         }
         response = requests.put(url=url, json=asdict(student), headers=headers)
         response_json = response.json()
-        if response.status_code == 200:
+        if response.status_code == 201:
             logging.info(response_json["message"])
         elif response.status_code == 401:
             logging.info("Signing in")
             self.signin()
+            headers["Authorization"] = "Bearer" + self.token
+            response = requests.put(url=url, json=asdict(student), headers=headers)
+            response_json = response.json()
+            logging.info(response_json["message"])
         else:
             logging.error(response_json["message"])
             logging.info(response_json["content"])
